@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --config webpack.dev.js",
-    "build": "webpack --config webpack.prod.js"
+    "build": "webpack --config webpack.dev.js"
   },
   "dependencies": {
     "framer-motion": "^12.6.3",
