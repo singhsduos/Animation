@@ -2,15 +2,20 @@ import React, { useState, useEffect } from 'react';
 import CatSprite from './CatSprite';
 import AddSpriteButton from './AddSpriteButton';
 import { useApp } from '../context/AppContext';
+import '../CSS/CatSprite.css'
+
 
 export default function PreviewArea() {
-  const { commands, sprites, setSprites, setSelectedSpriteId, selectedSpriteId } = useApp(); 
+  const { shakingSprites, commands, sprites, setSprites, checkAndSwapBlocksIfOverlapping, setSelectedSpriteId, selectedSpriteId } = useApp(); 
   const [angleMap, setAngleMap] = useState({}); 
   const [position, setPositions] = useState({});
   const randomX = Math.floor(Math.random() * 400);
   const randomY = Math.floor(Math.random() * 400);
+  const isShaking = shakingSprites.includes(sprites.id);
   useEffect(() => {
     let i = 0;
+    let newX = 50
+    let newY = 50
 
     setPositions((prev) => ({
       ...prev,
@@ -31,29 +36,62 @@ export default function PreviewArea() {
           ...prev,
           [selectedSpriteId]: (prev[selectedSpriteId] || 0) + value
         }));
+
       }
       if (type === 'goto' && selectedSpriteId) {
-        setPositions((prev) => ({
-          ...prev,
+        newX =  (value.x || 50),
+        newY =  (value.y || 50),
+        
+        setPositions((prev) => {
+          console.log("nex",newX)
+          console.log("ney",newY)
+      
+          const updatedSprites = sprites.map(sprite =>
+            sprite.id === selectedSpriteId
+              ? { ...sprite, x: newX, y: newY }
+              : sprite
+          );
+          
+          setSprites(updatedSprites);
+         return { ...prev,
           [selectedSpriteId]: {
-            x: (value.x || 50),
-            y: (value.y || 50),
+            x: newX,
+            y: newY
           }
-        }));
+        }
+        });
+
+        checkAndSwapBlocksIfOverlapping()
+
       }
       if (type === "move" && selectedSpriteId) {
         const dx = value * Math.cos((currentAngle * Math.PI) / 180);
         const dy = value * Math.sin((currentAngle * Math.PI) / 180);
-
-        setPositions((prev) => ({
-          ...prev,
-          [selectedSpriteId]: {
-            x: (prev[selectedSpriteId]?.x || 0) + dx,
-            y: (prev[selectedSpriteId]?.y || 0) + dy
-          }
-        }));
-       
+        
+        setPositions((prev) => {
+           newX = (prev[selectedSpriteId]?.x || 0) + dx;
+           newY = (prev[selectedSpriteId]?.y || 0) + dy;
+           const updatedSprites = sprites.map(sprite =>
+            sprite.id === selectedSpriteId
+              ? { ...sprite, x: newX, y: newY }
+              : sprite
+          );
+          
+          setSprites(updatedSprites);
+          return {
+            ...prev,
+            [selectedSpriteId]: {
+              x: newX,
+              y: newY,
+            }
+          };
+        });
+        console.log("nex",newX)
+        console.log("ney",newY)
+  
+        checkAndSwapBlocksIfOverlapping();
       }
+      
 
       i++;
       setTimeout(executeNext, 500);
@@ -62,6 +100,10 @@ export default function PreviewArea() {
     if (commands.length > 0 && selectedSpriteId) {
       executeNext();
     }
+
+    checkAndSwapBlocksIfOverlapping()
+    
+
   }, [commands, selectedSpriteId]);
 
   return (
@@ -72,7 +114,7 @@ export default function PreviewArea() {
         <div 
           key={sprite.id}
           onClick={() => setSelectedSpriteId(sprite.id)}
-          className='Neelesh'
+          className={`cat-sprite ${isShaking ? 'shake' : ''}`}
           style={{
             position: 'absolute',
             left: 0,
@@ -86,7 +128,7 @@ export default function PreviewArea() {
             display: 'inline-block',
           }}
         >
-          <CatSprite />
+          <CatSprite  sprite={sprite}/>
         </div>
       ))}
     </div>

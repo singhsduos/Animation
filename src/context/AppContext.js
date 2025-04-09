@@ -20,6 +20,8 @@ export function AppProvider({ children }) {
   const [selectedSpriteId, setSelectedSpriteId] = useState(catid);
   const [blocks, setBlocks] = useState({});
   const [commands, setCommands] = useState([]);
+  const [shakingSprites, setShakingSprites] = useState([]);
+
 
   const addSprite = () => {
     const newId = `sprite-${Date.now()}`;
@@ -48,6 +50,45 @@ export function AppProvider({ children }) {
   };
 
 
+  const checkAndSwapBlocksIfOverlapping = () => {
+    const overlappingSprites = [];
+  
+    for (let i = 0; i < sprites.length; i++) {
+      for (let j = i + 1; j < sprites.length; j++) {
+          if (isOverlapping(sprites[i], sprites[j])) {
+            console.log("ssss")
+          overlappingSprites.push([sprites[i].id, sprites[j].id]);
+        }
+      }
+    }
+  
+    if (overlappingSprites.length > 0) {
+      const [id1, id2] = overlappingSprites[0];
+  
+    
+      setShakingSprites([id1, id2]); 
+  
+     
+      setTimeout(() => {
+        const sprite1 = sprites.find((s) => s.id === id1);
+        const sprite2 = sprites.find((s) => s.id === id2);
+  
+        const updatedSprites = sprites.map((sprite) => {
+          if (sprite.id === id1) return { ...sprite, blocks: sprite2.blocks };
+          if (sprite.id === id2) return { ...sprite, blocks: sprite1.blocks };
+          return sprite;
+        });
+        console.log("updatedSprites",updatedSprites)
+  
+        setSprites(updatedSprites);
+        setShakingSprites([]);
+      }, 300);
+    }
+  };
+  
+
+
+
   return (
     <AppContext.Provider
       value={{
@@ -61,9 +102,21 @@ export function AppProvider({ children }) {
         setCommands,
         addSprite,
         updateSpriteBlocks,
+        checkAndSwapBlocksIfOverlapping,
+        shakingSprites,
+        setShakingSprites,
       }}
     >
       {children}
     </AppContext.Provider>
   );
 }
+  
+function isOverlapping(spriteA, spriteB,  radius = 50) {
+    const dx = spriteA.x - spriteB.x;
+    const dy = spriteA.y - spriteB.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+  
+    return distance < radius * 2;
+  }
+  

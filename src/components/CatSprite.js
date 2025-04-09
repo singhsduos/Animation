@@ -1,7 +1,14 @@
 import React from "react";
+import '../CSS/CatSprite.css'
+import { useApp } from '../context/AppContext';
 
-export default function CatSprite() {
+export default function CatSprite({ sprite }) {
+  const { shakingSprites } = useApp();
+  const isShaking = shakingSprites.includes(sprite.id);
   return (
+    <div
+  className={`cat-sprite ${isShaking ? 'shake' : ''}`}
+>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="95.17898101806641"
@@ -180,5 +187,6 @@ export default function CatSprite() {
         </g>
       </g>
     </svg>
+    </div>
   );
 }

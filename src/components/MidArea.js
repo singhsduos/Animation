@@ -11,7 +11,8 @@ export default function MidArea() {
     selectedSpriteId,
     setSprites,
     setBlocks,
-    blocks
+    blocks,
+    checkAndSwapBlocksIfOverlapping
   } = useApp();
 
   const [positions, setPositions] = useState({});
@@ -75,7 +76,8 @@ export default function MidArea() {
           return sprite;
         })
       );
-    
+
+    checkAndSwapBlocksIfOverlapping();
       setBlocks(prev => ({
         ...prev,
         [currentSpriteId]: [...(prev[currentSpriteId] || []), newBlock],
