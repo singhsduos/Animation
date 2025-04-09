@@ -56,7 +56,6 @@ export function AppProvider({ children }) {
     for (let i = 0; i < sprites.length; i++) {
       for (let j = i + 1; j < sprites.length; j++) {
           if (isOverlapping(sprites[i], sprites[j])) {
-            console.log("ssss")
           overlappingSprites.push([sprites[i].id, sprites[j].id]);
         }
       }
