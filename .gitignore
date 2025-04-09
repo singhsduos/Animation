@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -31,3 +32,6 @@ public/*.LICENSE.txt
 package-lock.json
 public/app.js
 public/app.css
+=======
+node_modules
+>>>>>>> f03ffe64262cf8aa084f61c72300f7f334c594b5
