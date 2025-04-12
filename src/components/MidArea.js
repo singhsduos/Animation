@@ -9,10 +9,8 @@ export default function MidArea() {
     setCommands,
     sprites,
     selectedSpriteId,
-    setSprites,
     setBlocks,
     blocks,
-    checkAndSwapBlocksIfOverlapping,
     setIsPlaying,
   } = useApp();
 
@@ -24,8 +22,6 @@ export default function MidArea() {
 
   useEffect(() => {
     selectedSpriteIdRef.current = selectedSpriteId;
-
-    // Sync positions if not already initialized
     const currentBlocks = blocks[selectedSpriteId] || [];
     const posObj = {};
     currentBlocks.forEach((block) => {
@@ -97,8 +93,6 @@ export default function MidArea() {
           [newBlockId]: { x: newX, y: newY },
         },
       }));
-
-      checkAndSwapBlocksIfOverlapping();
     },
   }));
 

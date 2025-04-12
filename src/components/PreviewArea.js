@@ -2,31 +2,53 @@ import React, { useState, useEffect, useRef } from 'react';
 import CatSprite from './CatSprite';
 import AddSpriteButton from './AddSpriteButton';
 import { useApp } from '../context/AppContext';
-import '../CSS/CatSprite.css'
-
+import '../CSS/CatSprite.css';
 
 export default function PreviewArea() {
-  const { isPlaying, setIsPlaying, shakingSprites, commands, sprites, setSprites, blocks, checkAndSwapBlocksIfOverlapping, setSelectedSpriteId, selectedSpriteId } = useApp(); 
-  const [angleMap, setAngleMap] = useState({}); 
+  const {
+    isPlaying,
+    setIsPlaying,
+    setShakingSprites,
+    shakingSprites,
+    commands,
+    sprites,
+    setSprites,
+    blocks,
+    setBlocks,
+    setSelectedSpriteId,
+    selectedSpriteId
+  } = useApp();
+
+  const [angleMap, setAngleMap] = useState({});
   const [position, setPositions] = useState({});
   const spriteTimeoutsRef = useRef({});
+  const swappedPairsRef = useRef(new Set());
 
   const randomX = Math.floor(Math.random() * 400);
   const randomY = Math.floor(Math.random() * 400);
   const isShaking = shakingSprites.includes(sprites.id);
-  
+
   const playAll = () => {
-    console.log("sprites",sprites)
-    console.log("blocks",blocks)
-    if(Object.keys(blocks).length === 0){
-      alert("First Add Events To Your Workspace")
+    if (Object.keys(blocks).length === 0) {
+      alert("First Add Events To Your Workspace");
       return;
     }
     setIsPlaying(true);
     sprites.forEach(sprite => {
-       executeCommandsForSpriteInLoop(sprites, blocks[sprite.id], sprite.id, setAngleMap, angleMap, spriteTimeoutsRef, setPositions, setSprites, checkAndSwapBlocksIfOverlapping)
+      executeCommandsForSpriteInLoop(
+        sprites,
+        blocks[sprite.id],
+        blocks,
+        setBlocks,
+        sprite.id,
+        setAngleMap,
+        angleMap,
+        spriteTimeoutsRef,
+        setPositions,
+        setSprites,
+        setShakingSprites
+      );
     });
-    
   };
 
   const pauseAll = () => {
@@ -35,21 +57,29 @@ export default function PreviewArea() {
       clearTimeout(timeoutId);
     });
     spriteTimeoutsRef.current = {};
-    
   };
 
   useEffect(() => {
     let i = 0;
-    let newX = 50
-    let newY = 50
+    let newX = 50;
+    let newY = 50;
 
-    setPositions((prev) => ({
-      ...prev,
-      [selectedSpriteId]: {
-        x: (prev[selectedSpriteId]?.x || randomX),
-        y: (prev[selectedSpriteId]?.y || randomY),
-      }
-    }));
+    setPositions(prev => {
+      const x = prev[selectedSpriteId]?.x || randomX;
+      const y = prev[selectedSpriteId]?.y || randomY;
+
+      const updatedSprites = sprites.map(sprite =>
+        sprite.id === selectedSpriteId
+          ? { ...sprite, x, y }
+          : sprite
+      );
+      setSprites(updatedSprites);
+
+      return {
+        ...prev,
+        [selectedSpriteId]: { x, y }
+      };
+    });
 
     const executeNext = () => {
       if (i >= commands.length) return;
@@ -62,60 +92,48 @@ export default function PreviewArea() {
           ...prev,
           [selectedSpriteId]: (prev[selectedSpriteId] || 0) + value
         }));
-
       }
+
       if (type === 'goto' && selectedSpriteId) {
-        newX =  (value.x || 50),
-        newY =  (value.y || 50),
-        
-        setPositions((prev) => {
-          console.log("nex",newX)
-          console.log("ney",newY)
-      
+        newX = value.x || 50;
+        newY = value.y || 50;
+
+        setPositions(prev => {
           const updatedSprites = sprites.map(sprite =>
             sprite.id === selectedSpriteId
               ? { ...sprite, x: newX, y: newY }
               : sprite
           );
-          
-        setSprites(updatedSprites);
-         return { ...prev,
-          [selectedSpriteId]: {
-            x: newX,
-            y: newY
-          }
-        }
+          setSprites(updatedSprites);
+
+          return {
+            ...prev,
+            [selectedSpriteId]: { x: newX, y: newY }
+          };
         });
-
-        checkAndSwapBlocksIfOverlapping()
-
       }
-      if (type === "move" && selectedSpriteId) {
+
+      if (type === 'move' && selectedSpriteId) {
         const dx = value * Math.cos((currentAngle * Math.PI) / 180);
         const dy = value * Math.sin((currentAngle * Math.PI) / 180);
-        
-        setPositions((prev) => {
-           newX = (prev[selectedSpriteId]?.x || 0) + dx;
-           newY = (prev[selectedSpriteId]?.y || 0) + dy;
-           const updatedSprites = sprites.map(sprite =>
+
+        setPositions(prev => {
+          newX = (prev[selectedSpriteId]?.x || 0) + dx;
+          newY = (prev[selectedSpriteId]?.y || 0) + dy;
+
+          const updatedSprites = sprites.map(sprite =>
             sprite.id === selectedSpriteId
               ? { ...sprite, x: newX, y: newY }
               : sprite
           );
-          
           setSprites(updatedSprites);
+
           return {
             ...prev,
-            [selectedSpriteId]: {
-              x: newX,
-              y: newY,
-            }
+            [selectedSpriteId]: { x: newX, y: newY }
           };
         });
-  
-        checkAndSwapBlocksIfOverlapping();
       }
-      
 
       i++;
       setTimeout(executeNext, 500);
@@ -124,29 +142,69 @@ export default function PreviewArea() {
     if (commands.length > 0 && selectedSpriteId) {
       executeNext();
     }
-
-    checkAndSwapBlocksIfOverlapping()
-    
-
   }, [commands, selectedSpriteId]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+  
+    sprites.forEach(sprite => {
+      const spriteId = sprite.id;
+      const newBlocks = blocks[spriteId];
+      const prevBlocks = spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`];
+  
+      // Compare current and previous blocks
+      const hasChanged = JSON.stringify(newBlocks) !== JSON.stringify(prevBlocks);
+  
+      if (hasChanged) {
+        // Save new blocks for future comparison
+        spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`] = newBlocks;
+  
+        // Clear previous loop
+        clearTimeout(spriteTimeoutsRef.current[spriteId]);
+  
+        // Start new loop with updated blocks
+        executeCommandsForSpriteInLoop(
+        sprites,
+        blocks[sprite.id],
+        blocks,
+        setBlocks,
+        sprite.id,
+        setAngleMap,
+        angleMap,
+        spriteTimeoutsRef,
+        setPositions,
+        setSprites,
+        setShakingSprites
+        );
+      }
+    });
+  }, [blocks, isPlaying, sprites]);
+  
+
+  useEffect(() => {
+    checkAndSwapBlocksIfOverlapping(sprites, setShakingSprites, blocks, setBlocks, position, swappedPairsRef);
+  }, [position]);
 
   return (
     <div className="relative h-[400px] w-full border bg-gray-100">
       <AddSpriteButton />
-      <button style={{
-        padding: '10px 20px',
-        fontWeight: 'bold',
-        backgroundColor: '#ffa726',
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        margin: '10px'
-      }} onClick={isPlaying ? pauseAll : playAll}>
-      {isPlaying ? 'Pause' : 'Play All'}
-       </button>
+      <button
+        style={{
+          padding: '10px 20px',
+          fontWeight: 'bold',
+          backgroundColor: '#ffa726',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          margin: '10px'
+        }}
+        onClick={isPlaying ? pauseAll : playAll}
+      >
+        {isPlaying ? 'Pause' : 'Play All'}
+      </button>
 
       {sprites.map(sprite => (
-        <div 
+        <div
           key={sprite.id}
           onClick={() => setSelectedSpriteId(sprite.id)}
           className={`cat-sprite ${isShaking ? 'shake' : ''}`}
@@ -154,38 +212,46 @@ export default function PreviewArea() {
             position: 'absolute',
             left: 0,
             top: 0,
-            transform: `translate(${(position[sprite.id]?.x)}px, ${(position[sprite.id]?.y)}px) rotate(${angleMap[sprite.id] || 0}deg)`,
+            transform: `translate(${position[sprite.id]?.x}px, ${position[sprite.id]?.y}px) rotate(${angleMap[sprite.id] || 0}deg)`,
             transition: 'transform 0.3s ease',
             border: sprite.id === selectedSpriteId ? '2px solid blue' : 'none',
             borderRadius: '8px',
             zIndex: sprite.id === selectedSpriteId ? 10 : 1,
             cursor: 'pointer',
-            display: 'inline-block',
+            display: 'inline-block'
           }}
         >
-          <CatSprite  sprite={sprite}/>
+          <CatSprite sprite={sprite} />
         </div>
       ))}
     </div>
   );
 }
 
-
-function executeCommandsForSpriteInLoop(sprites, blocksCommands, spriteId, setAngleMap, angleMap, spriteTimeoutsRef, setPositions, setSprites, checkAndSwapBlocksIfOverlapping) {
+function executeCommandsForSpriteInLoop(
+  sprites,
+  blocksCommands,
+  blocks,
+  setBlocks,
+  spriteId,
+  setAngleMap,
+  angleMap,
+  spriteTimeoutsRef,
+  setPositions,
+  setSprites,
+  setShakingSprites
+) {
   let i = 0;
   let newX = 50, newY = 50;
   let currentAngle = angleMap[spriteId] || 0;
-
-
 
   const runCommand = () => {
     if (!blocksCommands || blocksCommands.length === 0) return;
 
     const { type, value } = blocksCommands[i];
-    console.log("currentAngleBhar",angleMap)
 
     if (type === 'turn') {
-      currentAngle += value; 
+      currentAngle += value;
       setAngleMap(prev => ({
         ...prev,
         [spriteId]: (prev[spriteId] || 0) + value
@@ -207,13 +273,9 @@ function executeCommandsForSpriteInLoop(sprites, blocksCommands, spriteId, setAn
           [spriteId]: { x: newX, y: newY }
         };
       });
-
-      checkAndSwapBlocksIfOverlapping();
     }
 
     if (type === 'move') {
-    console.log("currentAngleAndar",currentAngle)
-
       const dx = value * Math.cos((currentAngle * Math.PI) / 180);
       const dy = value * Math.sin((currentAngle * Math.PI) / 180);
 
@@ -231,14 +293,62 @@ function executeCommandsForSpriteInLoop(sprites, blocksCommands, spriteId, setAn
           [spriteId]: { x: newX, y: newY }
         };
       });
-
-      checkAndSwapBlocksIfOverlapping();
     }
 
     i = (i + 1) % blocksCommands.length;
-
     spriteTimeoutsRef.current[spriteId] = setTimeout(runCommand, 500);
   };
 
   runCommand();
+}
+
+function checkAndSwapBlocksIfOverlapping(sprites, setShakingSprites, blocks, setBlocks, position, swappedPairsRef) {
+  const overlappingSprites = [];
+  const distanceThreshold = 50; 
+  let radius = 20;
+
+  for (let i = 0; i < sprites.length; i++) {
+    for (let j = i + 1; j < sprites.length; j++) {
+      const id1 = sprites[i].id;
+      const id2 = sprites[j].id;
+      const key = `${id1}-${id2}`;
+
+      const pos1 = position[id1] || { x: 0, y: 0 };
+      const pos2 = position[id2] || { x: 0, y: 0 };
+      const distance = isOverlapping(pos1, pos2)
+
+      if (distance<2*radius) {
+        if (!swappedPairsRef.current.has(key) && !swappedPairsRef.current.has(`${id2}-${id1}`)) {
+          swappedPairsRef.current.add(key);
+          swappedPairsRef.current.add(`${id2}-${id1}`);
+          setShakingSprites([id1, id2]);
+          
+          setTimeout(() => {
+            const block1 = blocks[id1] || [];
+            const block2 = blocks[id2] || [];
+
+            setBlocks(prev => ({
+              ...prev,
+              [id1]: block2,
+              [id2]: block1
+            }));
+
+            setShakingSprites([]);
+          }, 300);
+        }
+      }
+
+      if(distance>=distanceThreshold && swappedPairsRef.current.has(key) && swappedPairsRef.current.has(`${id2}-${id1}`)) {
+        swappedPairsRef.current.delete(key);
+        swappedPairsRef.current.delete(`${id2}-${id1}`);
+      }
+    }
+  }
+}
+
+function isOverlapping(spriteA, spriteB, radius = 20) {
+  const dx = spriteA.x - spriteB.x;
+  const dy = spriteA.y - spriteB.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return distance;
 }
