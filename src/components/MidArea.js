@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useDrop } from "react-dnd";
 import { useApp } from "../context/AppContext";
 import Draggable from "react-draggable";
@@ -12,20 +12,36 @@ export default function MidArea() {
     setSprites,
     setBlocks,
     blocks,
-    checkAndSwapBlocksIfOverlapping
+    checkAndSwapBlocksIfOverlapping,
+    setIsPlaying,
   } = useApp();
 
   const [positions, setPositions] = useState({});
   const containerRef = useRef(null);
-  const blocksRef = useRef([]);
 
   const sprite = sprites.find((s) => s.id === selectedSpriteId);
   const selectedSpriteIdRef = useRef(selectedSpriteId);
 
   useEffect(() => {
     selectedSpriteIdRef.current = selectedSpriteId;
-    blocksRef.current = blocks[selectedSpriteId] || [];
+
+    // Sync positions if not already initialized
+    const currentBlocks = blocks[selectedSpriteId] || [];
+    const posObj = {};
+    currentBlocks.forEach((block) => {
+      posObj[block.id] = { x: block.x, y: block.y };
+    });
+    setPositions((prev) => ({ ...prev, [selectedSpriteId]: posObj }));
   }, [selectedSpriteId, blocks]);
+
+  const updateBlockValue = (blockId, newValue) => {
+    setBlocks((prev) => {
+      const updated = (prev[selectedSpriteId] || []).map((b) =>
+        b.id === blockId ? { ...b, value: newValue } : b
+      );
+      return { ...prev, [selectedSpriteId]: updated };
+    });
+  };
 
   const handleBlockClick = (block) => {
     if (["move", "turn", "goto"].includes(block.type)) {
@@ -36,25 +52,29 @@ export default function MidArea() {
   const [, drop] = useDrop(() => ({
     accept: "BLOCK",
     drop: (item, monitor) => {
-      const currentSpriteId = selectedSpriteIdRef.current; 
-    
+      const currentSpriteId = selectedSpriteIdRef.current;
       const offset = monitor.getClientOffset();
       const containerRect = containerRef.current.getBoundingClientRect();
+
       const newX = offset.x - containerRect.left;
       const newY = offset.y - containerRect.top;
-    
+
       let matchedGroupId = null;
-      blocksRef.current.forEach((block) => {
-        const distanceX = Math.abs(block.x - newX);
-        const distanceY = Math.abs(block.y - newY);
-        if (distanceX < 80 && distanceY < 30) {
+      const currentBlocks = blocks[currentSpriteId] || [];
+
+      for (const block of currentBlocks) {
+        const dx = Math.abs(block.x - newX);
+        const dy = Math.abs(block.y - newY);
+        if (dx < 80 && dy < 30) {
           matchedGroupId = block.groupId;
+          break;
         }
-      });
-    
+      }
+
+      const newBlockId = uuidv4();
       const newBlock = {
         ...item,
-        id: uuidv4(),
+        id: newBlockId,
         x: newX,
         y: newY,
         groupId: matchedGroupId || uuidv4(),
@@ -64,83 +84,65 @@ export default function MidArea() {
             ? { x: sprite?.x ?? 0, y: sprite?.y ?? 0 }
             : item.defaultValue ?? item.value,
       };
-    
-      setSprites(prev =>
-        prev.map(sprite => {
-          if (sprite.id === currentSpriteId) {
-            return {
-              ...sprite,
-              blocks: [...(sprite.blocks || []), newBlock],
-            };
-          }
-          return sprite;
-        })
-      );
 
-    checkAndSwapBlocksIfOverlapping();
-      setBlocks(prev => ({
+      setBlocks((prev) => ({
         ...prev,
         [currentSpriteId]: [...(prev[currentSpriteId] || []), newBlock],
       }));
-    
-      setPositions(prev => ({
+
+      setPositions((prev) => ({
         ...prev,
-        [currentSpriteId]: [...(prev[currentSpriteId] || []), { x: newX, y: newY }],
+        [currentSpriteId]: {
+          ...(prev[currentSpriteId] || {}),
+          [newBlockId]: { x: newX, y: newY },
+        },
       }));
-    }
-    
+
+      checkAndSwapBlocksIfOverlapping();
+    },
   }));
 
-  const handleDrag = (e, data, index) => {
-    const draggedBlock = (blocks[selectedSpriteId] || [])[index];
-    const groupId = draggedBlock.groupId;
+  const handleDrag = useCallback((e, data, block, index) => {
+    const groupId = block.groupId;
+    const spriteBlocks = blocks[selectedSpriteId] || [];
+    const currentPositions = positions[selectedSpriteId] || {};
 
-    const deltaX = data.x - (positions[selectedSpriteId]?.[index]?.x || 0);
-    const deltaY = data.y - (positions[selectedSpriteId]?.[index]?.y || 0);
+    const deltaX = data.x - (currentPositions[block.id]?.x || 0);
+    const deltaY = data.y - (currentPositions[block.id]?.y || 0);
 
-    const updatedBlocks = (blocks[selectedSpriteId] || []).map((block, i) => {
-      if (block.groupId === groupId) {
+    const updatedBlocks = spriteBlocks.map((b) => {
+      if (b.groupId === groupId) {
         return {
-          ...block,
-          x: (positions[selectedSpriteId]?.[i]?.x || 0) + deltaX,
-          y: (positions[selectedSpriteId]?.[i]?.y || 0) + deltaY,
+          ...b,
+          x: (currentPositions[b.id]?.x || 0) + deltaX,
+          y: (currentPositions[b.id]?.y || 0) + deltaY,
         };
       }
-      return block;
+      return b;
     });
 
-    const updatedPositions = (positions[selectedSpriteId] || []).map((pos, i) => {
-      if ((blocks[selectedSpriteId] || [])[i].groupId === groupId) {
-        return {
-          x: (pos?.x || 0) + deltaX,
-          y: (pos?.y || 0) + deltaY,
+    const updatedPositions = { ...currentPositions };
+    spriteBlocks.forEach((b) => {
+      if (b.groupId === groupId) {
+        updatedPositions[b.id] = {
+          x: (currentPositions[b.id]?.x || 0) + deltaX,
+          y: (currentPositions[b.id]?.y || 0) + deltaY,
         };
       }
-      return pos;
     });
 
-    setSprites(prev =>
-      prev.map(sprite => {
-        if (sprite.id === selectedSpriteId) {
-          return {
-            ...sprite,
-            blocks: updatedBlocks,
-          };
-        }
-        return sprite;
-      })
-    );
-
-    setBlocks(prev => ({
+    setBlocks((prev) => ({
       ...prev,
       [selectedSpriteId]: updatedBlocks,
     }));
 
-    setPositions(prev => ({
+    setPositions((prev) => ({
       ...prev,
       [selectedSpriteId]: updatedPositions,
     }));
-  };
+
+    setIsPlaying(false);
+  }, [blocks, positions, selectedSpriteId]);
 
   return (
     <div
@@ -150,12 +152,15 @@ export default function MidArea() {
       }}
       className="flex-1 h-full bg-gray-100 p-4 overflow-y-auto rounded-xl relative"
     >
-      <h2 className="font-bold mb-4">Workspace for CatSprite Id - {selectedSpriteId}</h2>
+      <h2 className="font-bold mb-4">
+        Workspace for CatSprite Id - {selectedSpriteId}
+      </h2>
+
       {(blocks[selectedSpriteId] || []).map((block, index) => (
         <Draggable
           key={block.id}
           position={{ x: block.x, y: block.y }}
-          onDrag={(e, data) => handleDrag(e, data, index)}
+          onDrag={(e, data) => handleDrag(e, data, block, index)}
         >
           <div
             className={`absolute ${block.className} px-4 py-2 rounded-md shadow-md cursor-move text-sm`}

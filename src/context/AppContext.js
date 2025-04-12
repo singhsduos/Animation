@@ -21,6 +21,8 @@ export function AppProvider({ children }) {
   const [blocks, setBlocks] = useState({});
   const [commands, setCommands] = useState([]);
   const [shakingSprites, setShakingSprites] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
 
 
   const addSprite = () => {
@@ -104,6 +106,8 @@ export function AppProvider({ children }) {
         checkAndSwapBlocksIfOverlapping,
         shakingSprites,
         setShakingSprites,
+        isPlaying, 
+        setIsPlaying
       }}
     >
       {children}
