@@ -18,6 +18,10 @@ export default function PreviewArea() {
   const playAll = () => {
     console.log("sprites",sprites)
     console.log("blocks",blocks)
+    if(Object.keys(blocks).length === 0){
+      alert("First Add Events To Your Workspace")
+      return;
+    }
     setIsPlaying(true);
     sprites.forEach(sprite => {
        executeCommandsForSpriteInLoop(sprites, blocks[sprite.id], sprite.id, setAngleMap, angleMap, spriteTimeoutsRef, setPositions, setSprites, checkAndSwapBlocksIfOverlapping)
@@ -170,14 +174,18 @@ export default function PreviewArea() {
 function executeCommandsForSpriteInLoop(sprites, blocksCommands, spriteId, setAngleMap, angleMap, spriteTimeoutsRef, setPositions, setSprites, checkAndSwapBlocksIfOverlapping) {
   let i = 0;
   let newX = 50, newY = 50;
+  let currentAngle = angleMap[spriteId] || 0;
+
+
 
   const runCommand = () => {
     if (!blocksCommands || blocksCommands.length === 0) return;
 
     const { type, value } = blocksCommands[i];
-    const currentAngle = angleMap[spriteId] || 0;
+    console.log("currentAngleBhar",angleMap)
 
     if (type === 'turn') {
+      currentAngle += value; 
       setAngleMap(prev => ({
         ...prev,
         [spriteId]: (prev[spriteId] || 0) + value
@@ -204,6 +212,8 @@ function executeCommandsForSpriteInLoop(sprites, blocksCommands, spriteId, setAn
     }
 
     if (type === 'move') {
+    console.log("currentAngleAndar",currentAngle)
+
       const dx = value * Math.cos((currentAngle * Math.PI) / 180);
       const dy = value * Math.sin((currentAngle * Math.PI) / 180);
 
