@@ -45,6 +45,21 @@ export default function MidArea() {
     }
   };
 
+  const handleDeleteBlock = (blockId) => {
+    setBlocks((prev) => {
+      const updatedBlocks = (prev[selectedSpriteId] || []).filter(
+        (block) => block.id !== blockId
+      );
+      return { ...prev, [selectedSpriteId]: updatedBlocks };
+    });
+
+    setPositions((prev) => {
+      const updatedPositions = { ...prev };
+      delete updatedPositions[selectedSpriteId][blockId];
+      return updatedPositions;
+    });
+  };
+
   const [, drop] = useDrop(() => ({
     accept: "BLOCK",
     drop: (item, monitor) => {
@@ -161,6 +176,12 @@ export default function MidArea() {
             onClick={() => handleBlockClick(block)}
           >
             {renderBlockText(block)}
+            <button
+              onClick={() => handleDeleteBlock(block.id)}
+              className="ml-2 text-red-500 hover:text-red-700"
+            >
+              ❌
+            </button>
           </div>
         </Draggable>
       ))}
