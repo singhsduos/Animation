@@ -152,17 +152,13 @@ export default function PreviewArea() {
       const newBlocks = blocks[spriteId];
       const prevBlocks = spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`];
   
-      // Compare current and previous blocks
       const hasChanged = JSON.stringify(newBlocks) !== JSON.stringify(prevBlocks);
   
       if (hasChanged) {
-        // Save new blocks for future comparison
         spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`] = newBlocks;
   
-        // Clear previous loop
         clearTimeout(spriteTimeoutsRef.current[spriteId]);
-  
-        // Start new loop with updated blocks
+
         executeCommandsForSpriteInLoop(
         sprites,
         blocks[sprite.id],
