@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Draggable from 'react-draggable';
 import CatSprite from './CatSprite';
 import AddSpriteButton from './AddSpriteButton';
 import { useApp } from '../context/AppContext';
@@ -200,25 +201,52 @@ export default function PreviewArea() {
       </button>
 
       {sprites.map(sprite => (
-        <div
-          key={sprite.id}
-          onClick={() => setSelectedSpriteId(sprite.id)}
-          className={`cat-sprite ${isShaking ? 'shake' : ''}`}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            transform: `translate(${position[sprite.id]?.x}px, ${position[sprite.id]?.y}px) rotate(${angleMap[sprite.id] || 0}deg)`,
-            transition: 'transform 0.3s ease',
-            border: sprite.id === selectedSpriteId ? '2px solid blue' : 'none',
-            borderRadius: '8px',
-            zIndex: sprite.id === selectedSpriteId ? 10 : 1,
-            cursor: 'pointer',
-            display: 'inline-block'
-          }}
-        >
-          <CatSprite sprite={sprite} />
-        </div>
+          <Draggable
+            key={sprite.id}
+            position={{
+              x: position[sprite.id]?.x || 0,
+              y: position[sprite.id]?.y || 0
+            }}
+            bounds="parent"
+            onDrag={(e, data) => {
+              if (data.x !== position[sprite.id]?.x || data.y !== position[sprite.id]?.y) {
+                setPositions(prev => ({
+                  ...prev,
+                  [sprite.id]: { x: data.x, y: data.y }
+                }));
+          
+                setSprites(prev =>
+                  prev.map(s =>
+                    s.id === sprite.id ? { ...s, x: data.x, y: data.y } : s
+                  )
+                );
+              }
+            }}
+          >
+            <div
+              onClick={() => setSelectedSpriteId(sprite.id)}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                zIndex: sprite.id === selectedSpriteId ? 10 : 1,
+                cursor: 'pointer'
+              }}
+            >
+              <div
+                className={`cat-sprite ${isShaking ? 'shake' : ''}`}
+                style={{
+                  transform: `translate3d(${position[sprite.id]?.x || 0}px, ${position[sprite.id]?.y || 0}px, 0) rotate(${angleMap[sprite.id] || 0}deg)`,
+                  transition: 'transform 0.1s ease-out',
+                  border: sprite.id === selectedSpriteId ? '2px solid blue' : 'none',
+                  borderRadius: '8px',
+                  display: 'inline-block'
+                }}
+              >
+                <CatSprite sprite={sprite} />
+              </div>
+            </div>
+          </Draggable>
       ))}
     </div>
   );
