@@ -5,7 +5,7 @@ import AddSpriteButton from './AddSpriteButton';
 import { useApp } from '../context/AppContext';
 import '../CSS/CatSprite.css';
 
-export default function PreviewArea({previewAreaRef}) {
+export default function PreviewArea() {
   const {
     isPlaying,
     setIsPlaying,
@@ -285,19 +285,29 @@ export default function PreviewArea({previewAreaRef}) {
             }}
             bounds="parent"
             onDrag={(e, data) => {
-              if (data.x !== position[sprite.id]?.x || data.y !== position[sprite.id]?.y) {
-                setPositions(prev => ({
-                  ...prev,
-                  [sprite.id]: { x: data.x, y: data.y }
-                }));
-          
-                setSprites(prev =>
-                  prev.map(s =>
-                    s.id === sprite.id ? { ...s, x: data.x, y: data.y } : s
-                  )
-                );
-              }
-            }}
+             const { x, y } = data;
+             const maxX = maxBound.x;
+             const maxY = maxBound.y;
+           
+             if (x < 0 || y < 0 || x > maxX || y > maxY) {
+               return; 
+             }
+           
+           
+             if (x !== position[sprite.id]?.x || y !== position[sprite.id]?.y) {
+               setPositions(prev => ({
+                 ...prev,
+                 [sprite.id]: { x, y }
+               }));
+           
+               setSprites(prev =>
+                 prev.map(s =>
+                   s.id === sprite.id ? { ...s, x, y } : s
+                 )
+               );
+             }
+           }}
+
           >
             <div
               onClick={() => setSelectedSpriteId(sprite.id)}
