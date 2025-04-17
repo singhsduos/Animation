@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import MidArea from "./components/MidArea";
 import PreviewArea from "./components/PreviewArea";
@@ -8,6 +8,7 @@ import { AppProvider } from "./context/AppContext";
 
 
 export default function App() {
+  const previewAreaRef = useRef(null)
   return (
     <AppProvider>
     <DndProvider backend={HTML5Backend}>
@@ -16,8 +17,8 @@ export default function App() {
         <div className="flex-1 h-screen overflow-hidden flex flex-row bg-white border-t border-r border-gray-200 rounded-tr-xl mr-2">
           <Sidebar /> <MidArea />
         </div>
-        <div className="w-1/3 h-screen overflow-hidden flex flex-row bg-white border-t border-l border-gray-200 rounded-tl-xl ml-2">
-          <PreviewArea />
+        <div ref={previewAreaRef} style={{width:"40%"}} className="overflow-hidden flex flex-row bg-white border-t border-l border-gray-200 rounded-tl-xl ml-2">
+              <PreviewArea previewAreaRef={ previewAreaRef} />
         </div>
       </div>
     </div>

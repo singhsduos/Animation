@@ -5,7 +5,7 @@ import AddSpriteButton from './AddSpriteButton';
 import { useApp } from '../context/AppContext';
 import '../CSS/CatSprite.css';
 
-export default function PreviewArea() {
+export default function PreviewArea({previewAreaRef}) {
   const {
     isPlaying,
     setIsPlaying,
@@ -20,13 +20,16 @@ export default function PreviewArea() {
     selectedSpriteId
   } = useApp();
 
-  const [angleMap, setAngleMap] = useState({});
+  const angleMapRef = useRef({});
   const [position, setPositions] = useState({});
+  const [maxBound, setMaxBound] = useState({ x: null, y: null })
+  const [angleTick, setAngleTick] = useState(0); // 👈 dummy state
+
   const spriteTimeoutsRef = useRef({});
   const swappedPairsRef = useRef(new Set());
 
-  const randomX = Math.floor(Math.random() * 400);
-  const randomY = Math.floor(Math.random() * 400);
+  const randomX = Math.floor(Math.random() * 200);
+  const randomY = Math.floor(Math.random() * 200);
   const isShaking = shakingSprites.includes(sprites.id);
 
   const playAll = () => {
@@ -42,12 +45,13 @@ export default function PreviewArea() {
         blocks,
         setBlocks,
         sprite.id,
-        setAngleMap,
-        angleMap,
+        angleMapRef,
         spriteTimeoutsRef,
         setPositions,
         setSprites,
-        setShakingSprites
+        setShakingSprites,
+        maxBound,
+        setAngleTick
       );
     });
   };
@@ -57,6 +61,7 @@ export default function PreviewArea() {
     Object.values(spriteTimeoutsRef.current).forEach(timeoutId => {
       clearTimeout(timeoutId);
     });
+    console.log("spriteTimeoutsRef",spriteTimeoutsRef.current)
     spriteTimeoutsRef.current = {};
   };
 
@@ -64,6 +69,14 @@ export default function PreviewArea() {
     let i = 0;
     let newX = 50;
     let newY = 50;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const xAxisFinalValue = ((windowWidth * 0.40) / 2) - 50;
+    const yAxisFinalValue = ((windowHeight) / 2) - 50;
+    setMaxBound({
+      x: xAxisFinalValue,
+      y: yAxisFinalValue
+    })
 
     setPositions(prev => {
       const x = prev[selectedSpriteId]?.x || randomX;
@@ -86,13 +99,12 @@ export default function PreviewArea() {
       if (i >= commands.length) return;
 
       const { type, value } = commands[i];
-      const currentAngle = angleMap[selectedSpriteId] || 0;
+      let currentAngle = angleMapRef.current[selectedSpriteId] || 0;
 
       if (type === 'turn' && selectedSpriteId) {
-        setAngleMap(prev => ({
-          ...prev,
-          [selectedSpriteId]: (prev[selectedSpriteId] || 0) + value
-        }));
+        currentAngle += value;
+        angleMapRef.current[selectedSpriteId] = currentAngle;
+         setAngleTick(prev => prev + 1);
       }
 
       if (type === 'goto' && selectedSpriteId) {
@@ -100,6 +112,10 @@ export default function PreviewArea() {
         newY = value.y || 50;
 
         setPositions(prev => {
+         if (value.x > maxBound.x || value.y > maxBound.y || value.x < 0 || value.y < 0) {
+           alert("Out of bound. Clamping position.");
+           return {...prev}
+         }
           const updatedSprites = sprites.map(sprite =>
             sprite.id === selectedSpriteId
               ? { ...sprite, x: newX, y: newY }
@@ -115,26 +131,66 @@ export default function PreviewArea() {
       }
 
       if (type === 'move' && selectedSpriteId) {
-        const dx = value * Math.cos((currentAngle * Math.PI) / 180);
-        const dy = value * Math.sin((currentAngle * Math.PI) / 180);
+      const dx = value * Math.cos((currentAngle * Math.PI) / 180);
+      const dy = value * Math.sin((currentAngle * Math.PI) / 180);
 
-        setPositions(prev => {
-          newX = (prev[selectedSpriteId]?.x || 0) + dx;
-          newY = (prev[selectedSpriteId]?.y || 0) + dy;
-
-          const updatedSprites = sprites.map(sprite =>
-            sprite.id === selectedSpriteId
-              ? { ...sprite, x: newX, y: newY }
-              : sprite
+      setPositions(prev => {
+          const oldX = prev[selectedSpriteId]?.x || 0;
+          const oldY = prev[selectedSpriteId]?.y || 0;
+        
+         newX = oldX + dx;
+         newY = oldY + dy;
+        
+      
+          const minX = 0;
+          const minY = 0;
+          const maxX = maxBound.x;
+          const maxY = maxBound.y;
+        
+          let bounced = false;
+          currentAngle = angleMapRef.current[selectedSpriteId] || 0;
+        
+          
+          if (newX <= minX) {
+            newX = minX + 10;
+            bounced = true;
+          }
+        
+         
+          if (newX >= maxX) {
+            newX = maxX - 10;
+            bounced = true;
+          }
+        
+        
+          if (newY <= minY) {
+            newY = minY + 10;
+            bounced = true;
+          }
+        
+         
+          if (newY >= maxY) {
+            newY = maxY - 10;
+            bounced = true;
+          }
+        
+          if (bounced) {
+            currentAngle += 15;
+            angleMapRef.current[selectedSpriteId] = currentAngle;
+          }
+        
+          const updatedSprites = sprites.map(s =>
+            s.id === selectedSpriteId ? { ...s, x: newX, y: newY } : s
           );
           setSprites(updatedSprites);
-
+        
           return {
             ...prev,
             [selectedSpriteId]: { x: newX, y: newY }
           };
-        });
-      }
+      });
+
+    }
 
       i++;
       setTimeout(executeNext, 500);
@@ -161,17 +217,18 @@ export default function PreviewArea() {
         clearTimeout(spriteTimeoutsRef.current[spriteId]);
 
         executeCommandsForSpriteInLoop(
-        sprites,
-        blocks[sprite.id],
-        blocks,
-        setBlocks,
-        sprite.id,
-        setAngleMap,
-        angleMap,
-        spriteTimeoutsRef,
-        setPositions,
-        setSprites,
-        setShakingSprites
+           sprites,
+           blocks[sprite.id],
+           blocks,
+           setBlocks,
+           sprite.id,
+           angleMapRef,
+           spriteTimeoutsRef,
+           setPositions,
+           setSprites,
+           setShakingSprites,
+           maxBound,
+           setAngleTick
         );
       }
     });
@@ -181,6 +238,25 @@ export default function PreviewArea() {
   useEffect(() => {
     checkAndSwapBlocksIfOverlapping(sprites, setShakingSprites, blocks, setBlocks, position, swappedPairsRef);
   }, [position]);
+
+   useEffect(() => {
+     const updateBounds = () => {
+       const windowWidth = window.innerWidth;
+       const windowHeight = window.innerHeight;
+       const xAxisFinalValue = ((windowWidth * 0.40) / 2) - 50;
+       const yAxisFinalValue = (windowHeight / 2) - 50;
+   
+       setMaxBound({
+         x: xAxisFinalValue,
+         y: yAxisFinalValue
+       });
+     };
+     updateBounds();
+     window.addEventListener('resize', updateBounds);
+     return () => {
+       window.removeEventListener('resize', updateBounds);
+     };
+   }, []);
 
   return (
     <div className="relative h-[400px] w-full border bg-gray-100">
@@ -234,9 +310,10 @@ export default function PreviewArea() {
               }}
             >
               <div
+                key={angleTick}
                 className={`cat-sprite ${isShaking ? 'shake' : ''}`}
                 style={{
-                  transform: `translate3d(${position[sprite.id]?.x || 0}px, ${position[sprite.id]?.y || 0}px, 0) rotate(${angleMap[sprite.id] || 0}deg)`,
+                  transform: `translate(${position[sprite.id]?.x || 0}px, ${position[sprite.id]?.y || 0}px) rotate(${angleMapRef.current[sprite.id] || 0}deg)`,
                   transition: 'transform 0.1s ease-out',
                   border: sprite.id === selectedSpriteId ? '2px solid blue' : 'none',
                   borderRadius: '8px',
@@ -258,28 +335,27 @@ function executeCommandsForSpriteInLoop(
   blocks,
   setBlocks,
   spriteId,
-  setAngleMap,
-  angleMap,
+  angleMapRef,
   spriteTimeoutsRef,
   setPositions,
   setSprites,
-  setShakingSprites
+  setShakingSprites,
+  maxBound,
+  setAngleTick
 ) {
   let i = 0;
   let newX = 50, newY = 50;
-  let currentAngle = angleMap[spriteId] || 0;
 
   const runCommand = () => {
     if (!blocksCommands || blocksCommands.length === 0) return;
 
     const { type, value } = blocksCommands[i];
+    let currentAngle = angleMapRef.current[spriteId] || 0;
 
     if (type === 'turn') {
       currentAngle += value;
-      setAngleMap(prev => ({
-        ...prev,
-        [spriteId]: (prev[spriteId] || 0) + value
-      }));
+      angleMapRef.current[spriteId] = currentAngle;
+      setAngleTick(prev => prev + 1);
     }
 
     if (type === 'goto') {
@@ -287,6 +363,11 @@ function executeCommandsForSpriteInLoop(
       newY = value.y || 50;
 
       setPositions(prev => {
+        if (value.x > maxBound.x || value.y > maxBound.y || value.x < 0 || value.y < 0) {
+          alert("Out of bound. Clamping position.");
+           return {...prev}
+        }
+
         const updatedSprites = sprites.map(s =>
           s.id === spriteId ? { ...s, x: newX, y: newY } : s
         );
@@ -304,19 +385,61 @@ function executeCommandsForSpriteInLoop(
       const dy = value * Math.sin((currentAngle * Math.PI) / 180);
 
       setPositions(prev => {
-        newX = (prev[spriteId]?.x || 0) + dx;
-        newY = (prev[spriteId]?.y || 0) + dy;
-
-        const updatedSprites = sprites.map(s =>
-          s.id === spriteId ? { ...s, x: newX, y: newY } : s
-        );
-        setSprites(updatedSprites);
-
-        return {
-          ...prev,
-          [spriteId]: { x: newX, y: newY }
-        };
+          const oldX = prev[spriteId]?.x || 0;
+          const oldY = prev[spriteId]?.y || 0;
+        
+          let newX = oldX + dx;
+          let newY = oldY + dy;
+        
+      
+          const minX = 0;
+          const minY = 0;
+          const maxX = maxBound.x;
+          const maxY = maxBound.y;
+        
+          let bounced = false;
+          let currentAngle = angleMapRef.current[spriteId] || 0;
+        
+          
+          if (newX <= minX) {
+            newX = minX + 10;
+            bounced = true;
+          }
+        
+         
+          if (newX >= maxX) {
+            newX = maxX - 10;
+            bounced = true;
+          }
+        
+        
+          if (newY <= minY) {
+            newY = minY + 10;
+            bounced = true;
+          }
+        
+         
+          if (newY >= maxY) {
+            newY = maxY - 10;
+            bounced = true;
+          }
+        
+          if (bounced) {
+            currentAngle += 15;
+            angleMapRef.current[spriteId] = currentAngle;
+          }
+        
+          const updatedSprites = sprites.map(s =>
+            s.id === spriteId ? { ...s, x: newX, y: newY } : s
+          );
+          setSprites(updatedSprites);
+        
+          return {
+            ...prev,
+            [spriteId]: { x: newX, y: newY }
+          };
       });
+
     }
 
     i = (i + 1) % blocksCommands.length;
@@ -327,7 +450,6 @@ function executeCommandsForSpriteInLoop(
 }
 
 function checkAndSwapBlocksIfOverlapping(sprites, setShakingSprites, blocks, setBlocks, position, swappedPairsRef) {
-  const overlappingSprites = [];
   const distanceThreshold = 50; 
   let radius = 20;
 
