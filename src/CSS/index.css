@@ -1,0 +1,22 @@
+.block-expanded {
+    width: 14rem !important;
+    /* height: 50px !important; */
+    display: flex;
+    transition: all 0.2s ease-in-out;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.height-40 {
+    height: 40px !important;
+}
+.event-block {
+    transition: all 0.2s ease;
+}
+
+.event-block.expanded {
+    border: 2px dashed orange;
+    background-color: #fff8e1;
+    transform: scale(1.05);
+    z-index: 10;
+}

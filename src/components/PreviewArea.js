@@ -23,7 +23,7 @@ export default function PreviewArea() {
   const angleMapRef = useRef({});
   const [position, setPositions] = useState({});
   const [maxBound, setMaxBound] = useState({ x: null, y: null })
-  const [angleTick, setAngleTick] = useState(0); // 👈 dummy state
+  const [angleTick, setAngleTick] = useState(0); 
 
   const spriteTimeoutsRef = useRef({});
   const swappedPairsRef = useRef(new Set());
@@ -355,6 +355,7 @@ function executeCommandsForSpriteInLoop(
 ) {
   let i = 0;
   let newX = 50, newY = 50;
+  console.log(blocks)
 
   const runCommand = () => {
     if (!blocksCommands || blocksCommands.length === 0) return;
