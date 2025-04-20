@@ -158,15 +158,25 @@ export default function MidArea() {
       const currentBlocks = blocksRef.current[currentSpriteId] || [];
       let parentId = null;
       let parentBlock = null;
+      let samePostionOfEventBlock = false;
+      let sameEventDifferentValue = false;
 
       for (const block of currentBlocks) {
         const dx = Math.abs(block.x - newX);
         const dy = Math.abs(block.y - newY);
         if (dx <= 100 && dy <= 100) {
           matchedGroupId = block.groupId;
-          if (block.type === "event") {
+          if (block.value === item.value && block.type==="event" && item.type==="event") {
+            samePostionOfEventBlock = true;
+            matchedGroupId = null;
+          }
+
+          if (block.type === "event" && item.value != block.value) {
             parentId = block.id;
             parentBlock = block;
+            if (block.value !== item.value && block.type === "event" && item.type === "event") {
+              sameEventDifferentValue = true;
+            }
           }
           break;
         }
@@ -174,9 +184,9 @@ export default function MidArea() {
       if (parentId) {
         const children = currentBlocks.filter((b) => b.parentId === parentId);
         let last = null;
-        if (children.length === 1) {
+        if (children.length === 1 && !sameEventDifferentValue) {
           last = children[0];
-        } else if (children.length > 1) {
+        } else if (children.length > 1 && !sameEventDifferentValue) {
           last = children.reduce((a, b) => (a.y > b.y ? a : b));
         }
 
@@ -187,15 +197,14 @@ export default function MidArea() {
         } else if (parentBlock) {
           newX = parentBlock.x;
           newY = parentBlock.y + 40;
-        }
+        } 
       }
-
       const newBlockId = uuidv4();
       const newBlock = {
         ...item,
         id: newBlockId,
-        x: newX,
-        y: newY,
+        x: samePostionOfEventBlock ? newX+101: newX,
+        y: samePostionOfEventBlock? newY+101: newY,
         groupId: matchedGroupId || uuidv4(),
         parentId: parentId || null,
         className: item.className || "bg-orange-500 text-white",
@@ -205,22 +214,80 @@ export default function MidArea() {
             : item.defaultValue ?? item.value,
       };
 
-      setBlocks((prev) => {
-        const updated = {
+      if (sameEventDifferentValue) {
+        setBlocks((prev) => {
+          const spriteBlocks = prev[currentSpriteId] || [];
+          let updatedBlocks = [...spriteBlocks];
+          updatedBlocks = updatedBlocks.filter((block) => block.id !== newBlockId);
+  
+          const siblingsToShift = spriteBlocks.filter(
+            (b) =>
+              b.parentId === parentId &&
+              b.id !== newBlockId
+          );
+          siblingsToShift.forEach((sibling) => {
+            const index = updatedBlocks.findIndex((b) => b.id === sibling.id);
+            if (index !== -1) {
+              updatedBlocks[index] = {
+                ...updatedBlocks[index],
+                y: updatedBlocks[index].y + 40,
+              };
+            }
+          });
+            
+          const updated = {
           ...prev,
-          [currentSpriteId]: [...(prev[currentSpriteId] || []), newBlock],
+          [currentSpriteId]:[...updatedBlocks,newBlock],
         };
         blocksRef.current = updated;
         return updated;
-      });
 
-      setPositions((prev) => ({
-        ...prev,
-        [currentSpriteId]: {
-          ...(prev[currentSpriteId] || {}),
-          [newBlockId]: { x: newX, y: newY },
-        },
-      }));
+      }) 
+        setPositions((prev) => {
+        const currentPositions = { ...prev[currentSpriteId] };
+        const allBlocks = [...(blocksRef.current[currentSpriteId] || [])];
+        const siblingsToShift = allBlocks.filter(
+          (b) =>
+            b.parentId === parentId &&
+            b.id !== newBlockId 
+        );
+  
+        siblingsToShift.forEach((sibling) => {
+          if (currentPositions[sibling.id]) {
+            currentPositions[sibling.id] = {
+              ...currentPositions[sibling.id],
+              y: currentPositions[sibling.id].y + 40,
+            };
+          }
+        });
+
+        return {
+          ...prev,
+          [currentSpriteId]: currentPositions,
+        };
+
+       });
+      }
+      else {
+        setBlocks((prev) => {
+          const updated = {
+            ...prev,
+            [currentSpriteId]: [...(prev[currentSpriteId] || []), newBlock],
+          };
+          blocksRef.current = updated;
+          return updated;
+        
+        });
+        
+        setPositions((prev) => ({
+          ...prev,
+          [currentSpriteId]: {
+            ...(prev[currentSpriteId] || {}),
+            [newBlockId]: { x: newX, y: newY },
+          },
+        }));
+      }
+
     },
   }));
 
@@ -233,15 +300,28 @@ export default function MidArea() {
   
     let matchedGroupId = null;
     let matchedParentId = null;
-  
+    let samePostionOfEventBlock = false;
+    let sameEventDifferentValue = false;
+
     for (const b of spriteBlocks) {
       if (b.id !== block.id && b.type === "event") {
-        const dx = Math.abs((currentPositions[b.id]?.x || 0) - newX);
+      const dx = Math.abs((currentPositions[b.id]?.x || 0) - newX);
         const dy = Math.abs((currentPositions[b.id]?.y || 0) - newY);
   
         if (dx <= 100 && dy <= 100) {
           matchedGroupId = b.groupId;
-          matchedParentId = b.id;
+          if (b.value === block.value && b.type==="event" && block.type==="event") {
+            samePostionOfEventBlock = true;
+            matchedGroupId = null;
+          }
+
+         if (b.type === "event" && block.value != b.value) {
+           matchedParentId = b.id;  
+          if (block.value !== block.value && b.type === "event" && block.type === "event") {
+            sameEventDifferentValue = true;
+          }
+        }
+          
   
           newX = currentPositions[b.id]?.x || 0;
   
@@ -254,7 +334,7 @@ export default function MidArea() {
               (currentPositions[a.id]?.y || 0) > (currentPositions[b.id]?.y || 0) ? a : b
             );
             newY = (currentPositions[lastChild.id]?.y || 0) + 40;
-          } else {
+          } else  {
             newY = (currentPositions[b.id]?.y || 0) + 40;
           }
           break;
@@ -289,8 +369,61 @@ export default function MidArea() {
         };
       }
     });
+          if (sameEventDifferentValue) {
+        setBlocks((prev) => {
+          const spriteBlocks = prev[selectedSpriteId] || [];
+          let updatedBlocks = [...spriteBlocks];
+          updatedBlocks = updatedBlocks.filter((block) => block.id !== newBlockId);
   
-    setBlocks((prev) => ({
+          const siblingsToShift = spriteBlocks.filter(
+            (b) =>
+              b.parentId === parentId &&
+              b.id !== newBlockId
+          );
+          siblingsToShift.forEach((sibling) => {
+            const index = updatedBlocks.findIndex((b) => b.id === sibling.id);
+            if (index !== -1) {
+              updatedBlocks[index] = {
+                ...updatedBlocks[index],
+                y: updatedBlocks[index].y + 40,
+              };
+            }
+          });
+            
+          const updated = {
+          ...prev,
+          [selectedSpriteId]:[...updatedBlocks,newBlock],
+        };
+        return updated;
+
+      }) 
+        setPositions((prev) => {
+        const currentPositions = { ...prev[selectedSpriteId] };
+        const allBlocks = [...(blocksRef.current[selectedSpriteId] || [])];
+        const siblingsToShift = allBlocks.filter(
+          (b) =>
+            b.parentId === parentId &&
+            b.id !== newBlockId 
+        );
+  
+        siblingsToShift.forEach((sibling) => {
+          if (currentPositions[sibling.id]) {
+            currentPositions[sibling.id] = {
+              ...currentPositions[sibling.id],
+              y: currentPositions[sibling.id].y + 40,
+            };
+          }
+        });
+
+        return {
+          ...prev,
+          [currentSpriteId]: currentPositions,
+        };
+
+       });
+      }
+      else {
+            setBlocks((prev) => ({
       ...prev,
       [selectedSpriteId]: updatedBlocks,
     }));
@@ -299,6 +432,9 @@ export default function MidArea() {
       ...prev,
       [selectedSpriteId]: updatedPositions,
     }));
+      }
+  
+
   
     setIsPlaying(false);
   }, [blocks, positions, selectedSpriteId]);
