@@ -13,8 +13,8 @@ export default function DraggableBlock({ block, className }) {
   function renderBlockText(block) {
     switch (block.type) {
       case "event":
-        return block.value === "flag"
-          ? "When 🏁 clicked"
+        return block.value === "repeat"
+          ? "Loop Animation"
           : "When sprite clicked";
       case "move":
         return `Move ${block.value} steps`;

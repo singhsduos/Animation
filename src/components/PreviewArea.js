@@ -17,7 +17,9 @@ export default function PreviewArea() {
     blocks,
     setBlocks,
     setSelectedSpriteId,
-    selectedSpriteId
+    selectedSpriteId,
+    loopAnimationQueue,
+    setLoopAnimationQueue
   } = useApp();
 
   const angleMapRef = useRef({});
@@ -27,6 +29,7 @@ export default function PreviewArea() {
 
   const spriteTimeoutsRef = useRef({});
   const swappedPairsRef = useRef(new Set());
+  const loopingSpritesRef = useRef(new Map());
 
   const randomX = Math.floor(Math.random() * 200);
   const randomY = Math.floor(Math.random() * 200);
@@ -38,7 +41,12 @@ export default function PreviewArea() {
       return;
     }
     setIsPlaying(true);
+    let parentIdObj = {
+      isParent: false,
+      parentId: null
+    }
     sprites.forEach(sprite => {
+      clearTimeout(spriteTimeoutsRef.current[sprite.id]); 
       executeCommandsForSpriteInLoop(
         sprites,
         blocks[sprite.id],
@@ -51,7 +59,8 @@ export default function PreviewArea() {
         setSprites,
         setShakingSprites,
         maxBound,
-        setAngleTick
+        setAngleTick,
+        parentIdObj
       );
     });
   };
@@ -64,6 +73,101 @@ export default function PreviewArea() {
     console.log("spriteTimeoutsRef",spriteTimeoutsRef.current)
     spriteTimeoutsRef.current = {};
   };
+
+
+
+   useEffect(() => {
+     if (loopAnimationQueue.length === 0) return;
+   
+     const { spriteId, action, parentId } = loopAnimationQueue[0];
+   
+     if (action === "start") {
+       if (!loopingSpritesRef.current.has(spriteId)) {
+         loopingSpritesRef.current.set(spriteId, new Set());
+       }
+       loopingSpritesRef.current.get(spriteId).add(parentId);
+   
+       let parentIdObj = {
+         isParent: true,
+         parentId: parentId
+       };
+   
+       executeCommandsForSpriteInLoop(
+         sprites,
+         blocks[spriteId],
+         blocks,
+         setBlocks,
+         spriteId,
+         angleMapRef,
+         spriteTimeoutsRef,
+         setPositions,
+         setSprites,
+         setShakingSprites,
+         maxBound,
+         setAngleTick,
+         parentIdObj
+       );
+     } else if (action === "stop") {
+       clearTimeout(spriteTimeoutsRef.current[spriteId]);
+   
+       if (loopingSpritesRef.current.has(spriteId)) {
+         const parentSet = loopingSpritesRef.current.get(spriteId);
+         parentSet.delete(parentId);
+         if (parentSet.size === 0) {
+           loopingSpritesRef.current.delete(spriteId);
+         }
+       }
+     }
+   
+     setLoopAnimationQueue(prev => prev.slice(1));
+   }, [loopAnimationQueue]);
+   
+   useEffect(() => {
+     sprites.forEach(sprite => {
+       const spriteId = sprite.id;
+   
+       if (!loopingSpritesRef.current.has(spriteId)) return;
+   
+       const parentIds = loopingSpritesRef.current.get(spriteId);
+       if (!parentIds || parentIds.size === 0) return;
+   
+       const newBlocks = blocks[spriteId];
+       const prevBlocks = spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`];
+   
+       const hasChanged = JSON.stringify(newBlocks) !== JSON.stringify(prevBlocks);
+   
+       if (hasChanged) {
+         spriteTimeoutsRef.current[`__prevBlocks_${spriteId}`] = newBlocks;
+         clearTimeout(spriteTimeoutsRef.current[spriteId]);
+   
+         loopingSpritesRef.current.delete(spriteId);
+   
+         parentIds.forEach(parentId => {
+           let parentIdObj = {
+             isParent: true,
+             parentId: parentId
+           };
+   
+           executeCommandsForSpriteInLoop(
+             sprites,
+             blocks[spriteId],
+             blocks,
+             setBlocks,
+             spriteId,
+             angleMapRef,
+             spriteTimeoutsRef,
+             setPositions,
+             setSprites,
+             setShakingSprites,
+             maxBound,
+             setAngleTick,
+             parentIdObj
+           );
+         });
+       }
+     });
+   }, [blocks]);
+
 
   useEffect(() => {
     let i = 0;
@@ -201,8 +305,13 @@ export default function PreviewArea() {
     }
   }, [commands, selectedSpriteId]);
 
+
   useEffect(() => {
     if (!isPlaying) return;
+    let parentIdObj = {
+      isParent: false,
+      parentId: null
+    }
   
     sprites.forEach(sprite => {
       const spriteId = sprite.id;
@@ -228,7 +337,8 @@ export default function PreviewArea() {
            setSprites,
            setShakingSprites,
            maxBound,
-           setAngleTick
+           setAngleTick,
+           parentIdObj
         );
       }
     });
@@ -351,15 +461,20 @@ function executeCommandsForSpriteInLoop(
   setSprites,
   setShakingSprites,
   maxBound,
-  setAngleTick
+  setAngleTick,
+  parentIdObj
 ) {
   let i = 0;
   let newX = 50, newY = 50;
   console.log(blocks)
 
   const runCommand = () => {
+    if (parentIdObj.isParent) {
+      blocksCommands = blocks[spriteId].filter(block => block.parentId === parentIdObj.parentId);
+    } else {
+      blocksCommands =  blocks[spriteId]
+    }
     if (!blocksCommands || blocksCommands.length === 0) return;
-
     const { type, value } = blocksCommands[i];
     let currentAngle = angleMapRef.current[spriteId] || 0;
 

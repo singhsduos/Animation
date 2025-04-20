@@ -13,6 +13,7 @@ export default function MidArea() {
     setBlocks,
     blocks,
     setIsPlaying,
+    setLoopAnimationQueue
   } = useApp();
 
   const [positions, setPositions] = useState({});
@@ -51,75 +52,104 @@ export default function MidArea() {
     });
   };
 
-  const handleBlockClick = (block) => {
-    const allBlocks = blocks[selectedSpriteId] || [];
-    if (block.type === "event") {
-      const childBlocks = allBlocks
-        .filter((b) => b.parentId === block.id)
-        .sort((a, b) => a.y - b.y);
-      setCommands([block, ...childBlocks]);
-    } else if (["move", "turn", "goto"].includes(block.type)) {
-      setCommands([block]);
-    }
-  };
 
-  const handleDeleteBlock = (blockId) => {
-    setBlocks((prev) => {
-      const spriteBlocks = prev[selectedSpriteId] || [];
-      const blockToDelete = spriteBlocks.find((b) => b.id === blockId);
-      const blockY = blockToDelete?.y || 0;
-      const parentId = blockToDelete?.parentId;
-  
-      let updatedBlocks = [...spriteBlocks];
-  
-      if (blockToDelete?.type === "event") {
-        updatedBlocks = updatedBlocks.filter(
-          (block) => block.id !== blockId && block.parentId !== blockId
-        );
-      }
-      else {
-        updatedBlocks = updatedBlocks.filter((block) => block.id !== blockId);
-  
-        const siblingsToShift = spriteBlocks.filter(
-          (b) =>
-            b.parentId === parentId &&
-            b.id !== blockId &&
-            b.y > blockY
-        );
-  
-        siblingsToShift.forEach((sibling) => {
-          const index = updatedBlocks.findIndex((b) => b.id === sibling.id);
-          if (index !== -1) {
-            updatedBlocks[index] = {
-              ...updatedBlocks[index],
-              y: updatedBlocks[index].y - 40,
-            };
-          }
-        });
-      }
-  
-      return {
-        ...prev,
-        [selectedSpriteId]: updatedBlocks,
-      };
+   const handleBlockClick = (block, spriteId) => {
+     const allBlocks = blocks[spriteId] || [];
+      setLoopAnimationQueue(prev => {
+         const alreadyQueued = prev.some(
+           (q) => q.spriteId === spriteId && q.action === "stop"
+         );
+         return alreadyQueued ? prev : [...prev, { spriteId, action: "stop", parentId: block.id }];
+       });
+   
+     if (["move", "turn", "goto"].includes(block.type)) {
+       setCommands([block]);
+       return;
+     }
+   
+     if (block.type === "event") {
+       const childBlocks = allBlocks
+         .filter((b) => b.parentId === block.id)
+         .sort((a, b) => a.y - b.y);
+   
+       const executionList = [block, ...childBlocks];
+       setCommands(executionList);
+       
+       if (block.value == "repeat") {
+          setLoopAnimationQueue(prev => {
+            const alreadyQueued = prev.some(
+              (q) => q.spriteId === spriteId && q.action === "start"
+            );
+            return alreadyQueued ? prev : [...prev, { spriteId, action: "start", parentId: block.id }];
+          });
+       }
+     }
+   };
+
+
+
+ const handleDeleteBlock = (blockId) => {
+   setLoopAnimationQueue(prev => {
+      const alreadyQueued = prev.some(
+        (q) => q.spriteId === selectedSpriteId && q.action === "stop"
+      );
+      return alreadyQueued ? prev : [...prev, { spriteId: selectedSpriteId, action: "stop" }];
     });
-  
-    setPositions((prev) => {
+ 
+   setBlocks((prev) => {
+     const spriteBlocks = prev[selectedSpriteId] || [];
+     const blockToDelete = spriteBlocks.find((b) => b.id === blockId);
+     const blockY = blockToDelete?.y || 0;
+     const parentId = blockToDelete?.parentId;
+ 
+     let updatedBlocks = [...spriteBlocks];
+ 
+     if (blockToDelete?.type === "event" && blockToDelete?.parentId === null) {
+       updatedBlocks = updatedBlocks.filter(
+         (block) => block.id !== blockId && block.parentId !== blockId
+       );
+     } else {
+       console.log("else delete")
+       updatedBlocks = updatedBlocks.filter((block) => block.id !== blockId);
+ 
+       const siblingsToShift = spriteBlocks.filter(
+         (b) =>
+           b.parentId === parentId &&
+           b.id !== blockId &&
+           b.y > blockY
+       );
+ 
+       siblingsToShift.forEach((sibling) => {
+         const index = updatedBlocks.findIndex((b) => b.id === sibling.id);
+         if (index !== -1) {
+           updatedBlocks[index] = {
+             ...updatedBlocks[index],
+             y: updatedBlocks[index].y - 40,
+           };
+         }
+       });
+     }
+ 
+     return {
+       ...prev,
+       [selectedSpriteId]: updatedBlocks,
+     };
+   });
+
+  setPositions((prev) => {
       const currentPositions = { ...prev[selectedSpriteId] };
       const blockToDelete = blocks[selectedSpriteId]?.find((b) => b.id === blockId);
       const blockY = blockToDelete?.y || 0;
       const parentId = blockToDelete?.parentId;
   
       delete currentPositions[blockId];
-  
-      if (blockToDelete?.type === "event") {
+      if (blockToDelete?.type === "event" && blockToDelete?.parentId === null) {
         blocks[selectedSpriteId]
           .filter((b) => b.parentId === blockId)
           .forEach((child) => {
             delete currentPositions[child.id];
           });
-      } 
-      else {
+      } else {
         blocks[selectedSpriteId]
           .filter(
             (b) =>
@@ -144,6 +174,7 @@ export default function MidArea() {
     });
   };
 
+
   const [, drop] = useDrop(() => ({
     accept: "BLOCK",
     drop: (item, monitor) => {
@@ -160,23 +191,30 @@ export default function MidArea() {
       let parentBlock = null;
       let samePostionOfEventBlock = false;
       let sameEventDifferentValue = false;
+      let currentIsParent = false
 
       for (const block of currentBlocks) {
         const dx = Math.abs(block.x - newX);
-        const dy = Math.abs(block.y - newY);
+        const dy = Math.abs(block.y - newY)
         if (dx <= 100 && dy <= 100) {
-          matchedGroupId = block.groupId;
           if (block.value === item.value && block.type==="event" && item.type==="event") {
-            samePostionOfEventBlock = true;
-            matchedGroupId = null;
+              samePostionOfEventBlock = true;
+              matchedGroupId = null;
           }
 
           if (block.type === "event" && item.value != block.value) {
             parentId = block.id;
             parentBlock = block;
+            matchedGroupId = block.groupId;
             if (block.value !== item.value && block.type === "event" && item.type === "event") {
               sameEventDifferentValue = true;
             }
+          }
+          if (item.type === "event" && block.type != "event") {
+            currentIsParent = true;
+            matchedGroupId = block.groupId;
+            newX = block.x;
+            newY = block.y - 40;
           }
           break;
         }
@@ -270,14 +308,38 @@ export default function MidArea() {
       }
       else {
         setBlocks((prev) => {
-          const updated = {
-            ...prev,
-            [currentSpriteId]: [...(prev[currentSpriteId] || []), newBlock],
-          };
-          blocksRef.current = updated;
-          return updated;
-        
+           const updatedBlocks = (prev[currentSpriteId] || []).map((block) => {
+                const dx = Math.abs(block.x - newBlock.x);
+    const dy = Math.abs(block.y - newBlock.y);
+
+    if (currentIsParent && dx <= 100 && dy <= 100) {
+      return {
+        ...block,
+        parentId: newBlockId,
+        groupId: newBlock.groupId,
+      };
+    }
+             return block; 
+           });
+         
+          let updated = {}
+          if (currentIsParent) {
+            updated = {
+             ...prev,
+             [currentSpriteId]: [newBlock,...(updatedBlocks || [])],
+           };
+            
+          } else {
+             updated = {
+             ...prev,
+             [currentSpriteId]: [...(updatedBlocks || []),newBlock],
+           };
+          }
+         
+           blocksRef.current = updated;
+           return updated;
         });
+
         
         setPositions((prev) => ({
           ...prev,
@@ -466,7 +528,7 @@ export default function MidArea() {
             style={{
               zIndex: block.parentId ? 1 : 0
             }}
-            onClick={() => handleBlockClick(block)}
+            onClick={() => handleBlockClick(block,selectedSpriteId)}
           >
             {renderBlockText(block)}
             <button
@@ -484,8 +546,8 @@ export default function MidArea() {
   function renderBlockText(block) {
     switch (block.type) {
       case "event":
-        return block.value === "flag"
-          ? "When 🏁 clicked"
+        return block.value === "repeat"
+          ? "Loop Anmiation"
           : "When sprite clicked";
       case "move":
         return `Move ${block.value} steps`;

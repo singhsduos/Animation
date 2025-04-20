@@ -1,33 +1,32 @@
-import React, { createContext, useContext, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React, { createContext, useContext, useRef, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 
+const AppContext = createContext()
+export const useApp = () => useContext(AppContext)
 
-const AppContext = createContext();
-export const useApp = () => useContext(AppContext);
-
-export function AppProvider({ children }) {
- let catid = uuidv4()
+export function AppProvider ({ children }) {
+  let catid = uuidv4()
   const [sprites, setSprites] = useState([
     {
       id: catid,
       x: 50,
       y: 50,
-      blocks: [],
-    },
-  ]);
-  const [selectedSpriteId, setSelectedSpriteId] = useState(catid);
-  const [blocks, setBlocks] = useState({});
-  const [commands, setCommands] = useState([]);
-  const [shakingSprites, setShakingSprites] = useState([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-
+      blocks: []
+    }
+  ])
+  const [selectedSpriteId, setSelectedSpriteId] = useState(catid)
+  const [blocks, setBlocks] = useState({})
+  const [commands, setCommands] = useState([])
+  const [shakingSprites, setShakingSprites] = useState([])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [loopAnimationQueue, setLoopAnimationQueue] = useState([])
+  const intervalRefs = useRef({})
 
   const addSprite = () => {
-    const newId = `sprite-${Date.now()}`;
-    const randomX = Math.floor(Math.random() * 400);
-    const randomY = Math.floor(Math.random() * 400);
-    setSprites((prev) => [
+    const newId = `sprite-${Date.now()}`
+    const randomX = Math.floor(Math.random() * 400)
+    const randomY = Math.floor(Math.random() * 400)
+    setSprites(prev => [
       ...prev,
       {
         id: newId,
@@ -35,22 +34,20 @@ export function AppProvider({ children }) {
         x: randomX,
         y: randomY,
         direction: 90,
-        blocks: [],
-      },
-    ]);
-    setSelectedSpriteId(newId);
-  };
+        blocks: []
+      }
+    ])
+    setSelectedSpriteId(newId)
+  }
 
   const updateSpriteBlocks = (spriteId, newBlocks) => {
-    setSprites((prevSprites) =>
-      prevSprites.map((sprite) =>
-        sprite.id === spriteId ? { ...sprite, blocks: newBlocks } : sprite
+    setSprites(prevSprites =>
+      prevSprites.map(
+        sprite =>
+          sprite.id === spriteId ? { ...sprite, blocks: newBlocks } : sprite
       )
-    );
-  };
-
-
-
+    )
+  }
 
   return (
     <AppContext.Provider
@@ -58,7 +55,7 @@ export function AppProvider({ children }) {
         addSprite,
         blocks,
         commands,
-        isPlaying, 
+        isPlaying,
         selectedSpriteId,
         setBlocks,
         setCommands,
@@ -69,12 +66,11 @@ export function AppProvider({ children }) {
         shakingSprites,
         sprites,
         updateSpriteBlocks,
+        loopAnimationQueue,
+        setLoopAnimationQueue
       }}
     >
       {children}
     </AppContext.Provider>
-  );
+  )
 }
-  
-
-  

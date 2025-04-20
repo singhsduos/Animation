@@ -6,7 +6,7 @@ import DraggableBlock from "./DraggableBlock";
 
 export default function Sidebar() {
   const blocks = [
-    {  id: uuidv4(), type: "event", value: "flag", className: "bg-yellow-500", parentId: null },
+    {  id: uuidv4(), type: "event", value: "repeat", className: "bg-yellow-500", parentId: null },
     {  id: uuidv4(), type: "event", value: "spriteClick", className: "bg-yellow-500", parentId: null },
     {  id: uuidv4(), type: "move", value: 10, className: "bg-blue-500", parentId: null },
     {  id: uuidv4(), type: "turn", value: 15, className: "bg-blue-500", parentId: null },
