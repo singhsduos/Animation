@@ -26,7 +26,7 @@ export default function PreviewArea() {
   const [position, setPositions] = useState({});
   const [maxBound, setMaxBound] = useState({ x: null, y: null })
   const [angleTick, setAngleTick] = useState(0); 
-  const [visibilty, setVisibilty] = useState(true);
+  const [visibilty, setVisibilty] = useState({isVisible: true, spriteId: null});
 
   const spriteTimeoutsRef = useRef({});
   const swappedPairsRef = useRef(new Set());
@@ -216,10 +216,10 @@ export default function PreviewArea() {
          setAngleTick(prev => prev + 1);
       }
       if (type === 'show' && selectedSpriteId) {
-         setVisibilty(true)
+         setVisibilty({isVisible: true, spriteId:selectedSpriteId})
       }
       if (type === 'hide' && selectedSpriteId) {
-         setVisibilty(false)
+         setVisibilty({isVisible: false, spriteId:selectedSpriteId})
       }
 
       if (type === 'goto' && selectedSpriteId) {
@@ -443,7 +443,7 @@ export default function PreviewArea() {
             >
               <div
                 key={angleTick}
-                className={`cat-sprite ${isShaking ? 'shake' : ''} ${!visibilty ? 'looks-visiblity' : ''}`}
+                className={`cat-sprite ${isShaking ? 'shake' : ''} ${visibilty.spriteId == sprite.id &&  !visibilty.isVisible? 'looks-visiblity' : ''}`}
                 style={{
                   transform: `translate(${position[sprite.id]?.x || 0}px, ${position[sprite.id]?.y || 0}px) rotate(${angleMapRef.current[sprite.id] || 0}deg)`,
                   transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) ',
@@ -498,10 +498,11 @@ function executeCommandsForSpriteInLoop(
     }
     
       if (type === 'show' ) {
-         setVisibilty(true)
+        setVisibilty({isVisible: true, spriteId:spriteId})
+        
       }
       if (type === 'hide') {
-         setVisibilty(false)
+         setVisibilty({isVisible: false, spriteId:spriteId})
       }
 
     if (type === 'goto') {
