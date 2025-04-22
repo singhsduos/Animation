@@ -70,7 +70,7 @@ export default function MidArea() {
          return alreadyQueued ? prev : [...prev, { spriteId, action: "stop", parentId: block.id }];
        });
    
-     if (["move", "turn", "goto"].includes(block.type)) {
+     if (["move", "turn", "goto", "show", "hide"].includes(block.type)) {
        setCommands([block]);
        return;
      }
@@ -576,6 +576,10 @@ export default function MidArea() {
         );
       case "turn":
         return `Turn ${block.value} degrees`;
+      case "show":
+        return `Show`;
+      case "hide":
+        return 'Hide';
       case "goto":
         return (
           <div className="flex items-center space-x-2">

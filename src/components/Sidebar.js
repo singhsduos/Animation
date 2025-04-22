@@ -12,6 +12,8 @@ export default function Sidebar() {
     {  id: uuidv4(), type: "turn", value: 15, className: "bg-blue-500", parentId: null },
     {  id: uuidv4(), type: "turn", value: -15, className: "bg-blue-500", parentId: null },
     {  id: uuidv4(), type: "goto", value: { x: 0, y: 0 }, className: "bg-blue-500",parentId: null },
+    {  id: uuidv4(), type: "show", value: true, className: "bg-purple-500",parentId: null },
+    {  id: uuidv4(), type: "hide", value: false, className: "bg-purple-500",parentId: null },
   ];
   return (
     <div className="w-60 flex-none h-full overflow-y-auto flex flex-col items-start p-2 border-r border-gray-200">

@@ -22,6 +22,10 @@ export default function DraggableBlock({ block, className }) {
         return `Turn ${block.value} degrees`;
       case "goto":
         return `Go to x: ${block.value.x} y: ${block.value.y}`;
+      case "show":
+        return `Show`
+      case "hide":
+        return 'Hide'
       default:
         return "Unknown block";
     }
