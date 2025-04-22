@@ -51,6 +51,14 @@ export default function MidArea() {
       return { ...prev, [selectedSpriteId]: updated };
     });
   };
+    const moveNumberOfSteps = (blockId, newValue) => {
+       setBlocks((prev) => {
+         const updated = (prev[selectedSpriteId] || []).map((b) =>
+           b.id === blockId ? { ...b, value: newValue } : b
+         );
+         return { ...prev, [selectedSpriteId]: updated };
+       });
+    }
 
 
    const handleBlockClick = (block, spriteId) => {
@@ -526,7 +534,9 @@ export default function MidArea() {
              } px-4 py-2 rounded-md shadow-md cursor-move text-sm height-40`}
 
             style={{
-              zIndex: block.parentId ? 1 : 0
+              zIndex: block.parentId ? 1 : 0,
+              display: "flex",
+              flexDirection: "row"
             }}
             onClick={() => handleBlockClick(block,selectedSpriteId)}
           >
@@ -550,7 +560,20 @@ export default function MidArea() {
           ? "Loop Anmiation"
           : "When sprite clicked";
       case "move":
-        return `Move ${block.value} steps`;
+      return (
+          <div className="flex items-center space-x-2">
+            <span>Move</span>
+            <input
+              type="number"
+              value={block.value}
+              onChange={(e) =>
+                moveNumberOfSteps(block.id, e.target.value)
+              }
+              className="w-14 px-1 py-0.5 rounded text-black"
+            />
+            <span>steps</span>
+          </div>
+        );
       case "turn":
         return `Turn ${block.value} degrees`;
       case "goto":

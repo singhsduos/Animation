@@ -109,6 +109,7 @@ export default function PreviewArea() {
        );
      } else if (action === "stop") {
        clearTimeout(spriteTimeoutsRef.current[spriteId]);
+       setIsPlaying(false);
    
        if (loopingSpritesRef.current.has(spriteId)) {
          const parentSet = loopingSpritesRef.current.get(spriteId);
@@ -434,7 +435,7 @@ export default function PreviewArea() {
                 className={`cat-sprite ${isShaking ? 'shake' : ''}`}
                 style={{
                   transform: `translate(${position[sprite.id]?.x || 0}px, ${position[sprite.id]?.y || 0}px) rotate(${angleMapRef.current[sprite.id] || 0}deg)`,
-                  transition: 'transform 0.1s ease-out',
+                  transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) ',
                   border: sprite.id === selectedSpriteId ? '2px solid blue' : 'none',
                   borderRadius: '8px',
                   display: 'inline-block'
