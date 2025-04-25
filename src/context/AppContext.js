@@ -21,15 +21,6 @@ export function AppProvider ({ children }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [loopAnimationQueue, setLoopAnimationQueue] = useState([])
 
-  const updateSpriteBlocks = (spriteId, newBlocks) => {
-    setSprites(prevSprites =>
-      prevSprites.map(
-        sprite =>
-          sprite.id === spriteId ? { ...sprite, blocks: newBlocks } : sprite
-      )
-    )
-  }
-
   return (
     <AppContext.Provider
       value={{
@@ -45,7 +36,6 @@ export function AppProvider ({ children }) {
         setSprites,
         shakingSprites,
         sprites,
-        updateSpriteBlocks,
         loopAnimationQueue,
         setLoopAnimationQueue
       }}
