@@ -3,18 +3,19 @@ import { useApp } from '../context/AppContext'
 import { v4 as uuidv4 } from "uuid";
 
 
-export default function AddSpriteButton () {
+export default function AddSpriteButton ({pauseAll}) {
     const { sprites, setSprites, setSelectedSpriteId } = useApp();
-const handleAddSprite = () => {
-    const newSprite = {
-      id: uuidv4(),
-      x: Math.random() * 300,
-      y: Math.random() * 300,
-      blocks: [],
-    };
-    setSprites(prev => [...prev, newSprite]);
-    setSelectedSpriteId(newSprite.id);
-}
+     const handleAddSprite = () => {
+         pauseAll()
+         const newSprite = {
+           id: uuidv4(),
+           x: Math.random() * 300,
+           y: Math.random() * 300,
+           blocks: [],
+         };
+         setSprites(prev => [...prev, newSprite]);
+         setSelectedSpriteId(newSprite.id);
+     }
 
   return (
     <button

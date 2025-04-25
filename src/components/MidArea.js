@@ -540,7 +540,7 @@ export default function MidArea() {
             }}
             onClick={() => handleBlockClick(block,selectedSpriteId)}
           >
-            {renderBlockText(block)}
+            {renderBlockText(block,selectedSpriteId)}
             <button
               onClick={() => handleDeleteBlock(block.id)}
               className="ml-2 text-red-500 hover:text-red-700"

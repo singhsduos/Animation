@@ -12,6 +12,7 @@ export default function PreviewArea() {
     setShakingSprites,
     shakingSprites,
     commands,
+    setCommands,
     sprites,
     setSprites,
     blocks,
@@ -67,7 +68,7 @@ export default function PreviewArea() {
     });
   };
 
-  const pauseAll = () => {
+  function pauseAll(){
     setIsPlaying(false);
     Object.values(spriteTimeoutsRef.current).forEach(timeoutId => {
       clearTimeout(timeoutId);
@@ -75,6 +76,15 @@ export default function PreviewArea() {
     console.log("spriteTimeoutsRef",spriteTimeoutsRef.current)
     spriteTimeoutsRef.current = {};
   };
+
+  function resetAll() {
+    pauseAll();
+    spriteTimeoutsRef.current = {};
+    swappedPairsRef.current = new Set();
+    loopingSpritesRef.current = new Map();
+    setBlocks({})
+    setCommands([])
+  }
 
 
 
@@ -382,7 +392,7 @@ export default function PreviewArea() {
 
   return (
     <div className="relative h-[400px] w-full border bg-gray-100">
-      <AddSpriteButton />
+      <AddSpriteButton pauseAll={pauseAll} />
       <button
         style={{
           padding: '10px 20px',
@@ -396,6 +406,20 @@ export default function PreviewArea() {
         onClick={isPlaying ? pauseAll : playAll}
       >
         {isPlaying ? 'Pause' : 'Play All'}
+      </button>
+         <button
+        style={{
+          padding: '10px 20px',
+          fontWeight: 'bold',
+          backgroundColor: '#ffa726',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          margin: '10px'
+        }}
+        onClick={resetAll}
+      >
+       Reset All
       </button>
 
       {sprites.map(sprite => (
