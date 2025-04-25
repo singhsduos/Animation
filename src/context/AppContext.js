@@ -20,25 +20,6 @@ export function AppProvider ({ children }) {
   const [shakingSprites, setShakingSprites] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
   const [loopAnimationQueue, setLoopAnimationQueue] = useState([])
-  const intervalRefs = useRef({})
-
-  const addSprite = () => {
-    const newId = `sprite-${Date.now()}`
-    const randomX = Math.floor(Math.random() * 400)
-    const randomY = Math.floor(Math.random() * 400)
-    setSprites(prev => [
-      ...prev,
-      {
-        id: newId,
-        name: `Cat ${prev.length + 1}`,
-        x: randomX,
-        y: randomY,
-        direction: 90,
-        blocks: []
-      }
-    ])
-    setSelectedSpriteId(newId)
-  }
 
   const updateSpriteBlocks = (spriteId, newBlocks) => {
     setSprites(prevSprites =>
@@ -52,7 +33,6 @@ export function AppProvider ({ children }) {
   return (
     <AppContext.Provider
       value={{
-        addSprite,
         blocks,
         commands,
         isPlaying,

@@ -317,16 +317,16 @@ export default function MidArea() {
       else {
         setBlocks((prev) => {
            const updatedBlocks = (prev[currentSpriteId] || []).map((block) => {
-                const dx = Math.abs(block.x - newBlock.x);
-    const dy = Math.abs(block.y - newBlock.y);
+           const dx = Math.abs(block.x - newBlock.x);
+           const dy = Math.abs(block.y - newBlock.y);
 
-    if (currentIsParent && dx <= 100 && dy <= 100) {
-      return {
-        ...block,
-        parentId: newBlockId,
-        groupId: newBlock.groupId,
-      };
-    }
+          if (currentIsParent && dx <= 100 && dy <= 100) {
+            return {
+              ...block,
+              parentId: newBlockId,
+              groupId: newBlock.groupId,
+            };
+          }
              return block; 
            });
          
@@ -357,7 +357,6 @@ export default function MidArea() {
           },
         }));
       }
-
     },
   }));
 
@@ -439,7 +438,7 @@ export default function MidArea() {
         };
       }
     });
-          if (sameEventDifferentValue) {
+    if (sameEventDifferentValue) {
         setBlocks((prev) => {
           const spriteBlocks = prev[selectedSpriteId] || [];
           let updatedBlocks = [...spriteBlocks];
@@ -493,18 +492,16 @@ export default function MidArea() {
        });
       }
       else {
-            setBlocks((prev) => ({
-      ...prev,
-      [selectedSpriteId]: updatedBlocks,
-    }));
+         setBlocks((prev) => ({
+           ...prev,
+           [selectedSpriteId]: updatedBlocks,
+         }));
   
-    setPositions((prev) => ({
-      ...prev,
-      [selectedSpriteId]: updatedPositions,
-    }));
+          setPositions((prev) => ({
+            ...prev,
+            [selectedSpriteId]: updatedPositions,
+          }));
       }
-  
-
   
     setIsPlaying(false);
   }, [blocks, positions, selectedSpriteId]);
